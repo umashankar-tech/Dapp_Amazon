@@ -14,10 +14,69 @@ import config from './config.json'
 
 function App() {
 
+  const [account, setAccount] = useState(null)
+  const [provider, setProvider] = useState(null)
+  const [dappazon, setDappazon] = useState(null)
+  const [electronics, setElectronics] = useState(null)
+  const [clothing, setclothing] = useState(null)
+  const [toys, setToys] = useState(null)
+
+  const [item, setItem] = useState({})
+  const [toggle, setToggle] = useState(false)
+
+  const togglePop = (item) => {
+    setItem(item)
+    toggle?setToggle(false):setToggle(true)
+  }
+
+  const loadBlockChainData = async () => {
+    // connect to blockchain
+    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    setProvider(provider)
+    const netwrok = await provider.getNetwork()
+
+    // Connect to smart contracts (create js version)
+    const dappazon = new ethers.Contract(config[netwrok.chainId].dappazon.address, Dappazon, provider)
+    setDappazon(dappazon)
+
+    // Load Products
+    const items = []
+    for (let i = 0; i < 9; i++) {
+      const item = await dappazon.items(i + 1)
+      items.push(item)
+    }
+
+    const electronics = items.filter((item) => item.category === "electronics")
+    setElectronics(electronics)
+    const clothing = items.filter((item) => item.category === "clothing")
+    setclothing(clothing)
+    const toys = items.filter((item) => item.category === "toys")
+    setToys(toys)
+  }
+
+  useEffect(() => {
+    loadBlockChainData()
+  }, [])
+
   return (
     <div>
+      <Navigation account={account} setAccount={setAccount} />
+      <h2>Dappazon Best Sellers</h2>
 
-      <h2>Welcome to Dappazon</h2>
+      {
+        electronics && clothing && toys && (
+          <>
+            <Section title={"Clothing & Jewelry"} items={clothing} togglePop={togglePop} />
+            <Section title={"Electronics"} items={electronics} togglePop={togglePop} />
+            <Section title={"Toys"} items={toys} togglePop={togglePop} />
+          </>
+
+        )
+      }
+
+      {toggle && (
+        <Product item={item} provider={provider} account={account} dappazon={dappazon} togglePop={togglePop}/>
+)}
 
     </div>
   );
